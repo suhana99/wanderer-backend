@@ -3,6 +3,10 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 # Create your models here.
 
+class PackageManager(models.Manager):
+    def count_unavailable(self):
+        return self.filter(availability=False).count()
+
 class Package(models.Model):
     name=models.CharField(max_length=100)
     image=models.ImageField(upload_to='uploads')
@@ -12,9 +16,10 @@ class Package(models.Model):
     duration=models.IntegerField()
     availability=models.BooleanField()
     created_at=models.DateTimeField(auto_now_add=True)
-
+    objects = PackageManager()
     def __str__(self):
         return self.name
+    
     
 class Review(models.Model):
     package = models.ForeignKey(Package, related_name='reviews', on_delete=models.CASCADE)
