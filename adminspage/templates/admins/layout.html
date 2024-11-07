@@ -58,7 +58,7 @@
                 src="{% static 'images/me.jpg'%}"
                 alt="" class="img-fluid " width="300">
             </div>
-            <form action="/user/logout" method="post" class="d-inline">
+            <form action="/adminspage/login/" method="post" class="d-inline">
               <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
               <button type="submit" class="btn btn-warning mt-3">Logout</button>
             </form>            

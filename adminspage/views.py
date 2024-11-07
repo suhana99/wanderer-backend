@@ -5,9 +5,34 @@ from accounts.auth import admin_only
 from accounts.models import Bookings
 from package.models import * 
 from bookings.models import Booking
+from django.contrib.auth import authenticate,login,logout
+from django.contrib import messages
+from .forms import LoginForm
 
+def login_form(request):
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            user = authenticate(request, username=data['username'], password=data['password'])
+            if user is not None:
+                login(request, user)
+                if user.is_staff:
+                    return redirect('/adminspage/dashboard')
+            else:
+                messages.error(request, 'Please provide valid credentials')
+    else:
+        form = LoginForm() 
 
-# Create your views here.
+    return render(request, 'admins/login.html', {'form': form})
+
+def logout_user(request):
+    logout(request)
+    context={
+        'form':LoginForm
+    }
+    return render(request,'admins/login.html',context)
+
 
 @login_required
 @admin_only
