@@ -1,0 +1,12 @@
+from django.urls import path
+from .views import *
+
+
+urlpatterns = [
+        path('register/',RegistrationView.as_view(),name='registration'),
+        path('approve-reject-seller/<int:user_id>/', ApproveRejectSellerView.as_view(), name='approve-reject-seller'),
+        path('login/',LoginView.as_view(),name='login'),
+        path('logout/',LogoutView.as_view(),name='logout'),
+        path('forgot-password/',ForgotPasswordView.as_view(),name='forgot_password'),
+        path('reset-password/<str:token>/',PasswordResetView.as_view(),name='reset_password'),
+]
