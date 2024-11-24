@@ -41,6 +41,8 @@
                         <th>User</th>
                         <th>Package</th>
                         <th>No. of people</th>
+                        <th>Hotels</th>
+                        <th>Activities</th>
                         <th>Booking date</th>
                         <th>Action</th>
                     </tr>
@@ -52,6 +54,16 @@
                         <td>{{i.user}}</td>
                         <td>{{i.package}}</td>
                         <td>{{i.number_of_people}}</td>
+                        <td>
+                            {% for hotel in hotels %}
+                                 {{hotel.name}}
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% for activity in activity %}
+                                 {{activity.name}}
+                            {% endfor %}
+                        </td>
                         <td>{{i.booking_date}} </td>
                        <!-- <td>  {{i.payment_method}} </td> -->
                        <td>

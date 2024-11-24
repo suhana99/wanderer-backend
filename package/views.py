@@ -16,9 +16,45 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import login_required
 from .forms import *
 
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+
 
 # Create your views here.
 
+class AddHotelsActivitiesToPackageView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, package_id):
+        try:
+            package = Package.objects.get(id=package_id)
+        except Package.DoesNotExist:
+            return Response({"error": "Package not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        hotels = request.data.get('hotels', [])
+        activities = request.data.get('activities', [])
+
+        # Add hotels
+        if hotels:
+            for hotel_id in hotels:
+                try:
+                    hotel = Hotel.objects.get(id=hotel_id)
+                    package.hotels.add(hotel)
+                except Hotel.DoesNotExist:
+                    continue
+
+        # Add activities
+        if activities:
+            for activity_id in activities:
+                try:
+                    activity = Activity.objects.get(id=activity_id)
+                    package.activities.add(activity)
+                except Activity.DoesNotExist:
+                    continue
+
+        package.save()
+        return Response({"message": "Hotels and activities added to package successfully."}, status=status.HTTP_200_OK)
+    
 class Featured_list(generics.ListAPIView):
     queryset=Package.objects.all().order_by('-id')[:6]
     serializer_class=PackageSerializer
@@ -35,12 +71,16 @@ class ReviewListCreate(generics.ListCreateAPIView):
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
-        package_id = self.kwargs['pk']
+        package_id = self.kwargs['package_id']
         return Review.objects.filter(package_id=package_id)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
+        package_id = self.kwargs['package_id']
+        try:
+            package = Package.objects.get(id=package_id)
+        except Package.DoesNotExist:
+            raise ValidationError("Invalid package ID.")
+        serializer.save(user=self.request.user, package=package)
 
 @login_required
 @admin_only

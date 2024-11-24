@@ -22,5 +22,5 @@ urlpatterns = [
     path('users/',include("users.urls"),name='users'),
     path('adminspage/',include("adminspage.urls"),name='adminspage'),
     path('package/',include("package.urls"),name='package'),
-    path('bookings/',include("package.urls"),name='bookings'),
+    path('bookings/',include("bookings.urls"),name='bookings'),
 ]
