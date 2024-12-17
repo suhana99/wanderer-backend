@@ -55,8 +55,8 @@
                         <td>{{i.package}}</td>
                         <td>{{i.number_of_people}}</td>
                         <td>
-                            {% for hotel in hotels %}
-                                 {{hotel.name}}
+                            {% for hotels in i.hotels %}
+                                 {{hotels.name}}
                             {% endfor %}
                         </td>
                         <td>

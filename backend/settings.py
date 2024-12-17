@@ -147,7 +147,7 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR,'static')]
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR,'media')
+MEDIA_ROOT = BASE_DIR / 'media'
 
 AUTH_USER_MODEL='users.CustomUser'
 
@@ -189,3 +189,11 @@ CORS_ALLOW_METHODS = (
     "POST",
     "PUT",
 )
+
+# settings.py
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+

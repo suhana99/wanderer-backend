@@ -1,73 +1,93 @@
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from .models import Booking
 from .serializers import BookingSerializer
+from package.models import Package, Hotel, Activity
 from users.auth import admin_only
-from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated
-
-@api_view(['POST'])
-def create_booking(request):
-    if request.method == 'POST':
-        serializer = BookingSerializer(data=request.data)
-        if serializer.is_valid():
-            # Additional logic for checking availability can be added here
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from .models import Package, Booking
-from .forms import BookingForm
-from package.models import Hotel, Activity
 
-@login_required
-def book_package(request, package_id,hotel_id,activity_id):
-    package = Package.objects.get(id=package_id)
-    hotels=Hotel.objects.get(id=hotel_id)
-    activity=Activity.objects.get(id=activity_id) 
-    if not package.availability:
-        # Handle unavailable package case
-        return render(request, 'package_unavailable.html')
 
-    if request.method == 'POST':
-        form = BookingForm(request.POST)
-        if form.is_valid():
-            booking = form.save(commit=False)
-            booking.user = request.user
-            booking.package = package
-            booking.save()
-            return redirect('booking_success')  # Redirect to a success page
-    else:
-        form = BookingForm(initial={'package': package})
+class CreateBookingView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    return render(request, 'bookings/bookings.html', {'form': form, 'package': package, 'hotels':hotels, 'activity':activity})
+    def post(self, request):
+        data = request.data
+        user = request.user
+
+        # Ensure the package exists
+        package_id = data.get('package')
+        try:
+            package = Package.objects.get(id=package_id)
+        except Package.DoesNotExist:
+            return Response({'error': 'Package does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create the booking
+        serializer = BookingSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save(user=user, package=package)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ListBookingsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        bookings = Booking.objects.filter(user=user)
+        serializer = BookingSerializer(bookings, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class SellerDashboardView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        seller = request.user
+
+        # Retrieve hotels and activities owned by the seller
+        seller_hotels = Hotel.objects.filter(owner=seller)
+        seller_activities = Activity.objects.filter(owner=seller)
+
+        # Retrieve packages that include these hotels or activities
+        packages_with_seller_hotels = Package.objects.filter(hotels__in=seller_hotels)
+        packages_with_seller_activities = Package.objects.filter(activities__in=seller_activities)
+
+        # Combine packages and ensure uniqueness
+        related_packages = packages_with_seller_hotels | packages_with_seller_activities
+
+        # Retrieve bookings for these packages
+        bookings = Booking.objects.filter(package__in=related_packages).select_related('user', 'package')
+
+        # Serialize data
+        data = []
+        for booking in bookings:
+            data.append({
+                'package_name': booking.package.name,
+                'user_full_name': booking.full_name,
+                'user_phone_number': booking.phone_number,
+                'booking_date': booking.booking_date,
+                'hotel_names': [hotel.name for hotel in booking.package.hotels.filter(owner=seller)],
+                'activity_names': [activity.name for activity in booking.package.activities.filter(owner=seller)],
+            })
+
+        return Response(data, status=status.HTTP_200_OK)
+    
 
 @login_required
 @admin_only
 def booking(request):
     items=Booking.objects.all()
+    for item in items:
+        package = item.package
+        hotels = package.hotels.all() 
+        activities = package.activities.all() 
     context={
-        'items':items
+        'items':items,
+        'hotels':hotels,
+        'activities':activities,
     }
     return render(request,'bookings/bookings.html',context)
-
-class SellerDashboardView(ListAPIView):
-    serializer_class = BookingSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-
-        # Hotel owners see bookings for their hotels
-        if user.role == 'hotel_owner':
-            return Booking.objects.filter(package__hotel__owner=user).select_related('package', 'user')
-
-        # Activity listers see bookings for their activities
-        elif user.role == 'activity_lister':
-            return Booking.objects.filter(package__activity__owner=user).select_related('package', 'user')
-
-        # Non-sellers or unauthorized users see nothing
-        return Booking.objects.none()

@@ -1,15 +1,15 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from users.models import CustomUser
+
 
 # Hotel Model
 class Hotel(models.Model):
     owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,  # Refers to the CustomUser model
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='hotels',
-        limit_choices_to={'role': 'hotel_owner'},  # Restrict to hotel owners
+        limit_choices_to={'role': 'hotel_owner'},
     )
     name = models.CharField(max_length=100)
     location = models.CharField(max_length=100)
@@ -25,7 +25,7 @@ class Activity(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='activities',
-        limit_choices_to={'role': 'activity_lister'},  # Restrict to activity listers
+        limit_choices_to={'role': 'activity_lister'},
     )
     name = models.CharField(max_length=100)
     location = models.CharField(max_length=100)
@@ -35,21 +35,22 @@ class Activity(models.Model):
         return f"Activity: {self.name} at {self.location}"
 
 
+# Package Manager
 class PackageManager(models.Manager):
     def count_unavailable(self):
         return self.filter(availability=False).count()
-    
-# Updated Package Model
+
+
+# Package Model
 class Package(models.Model):
     name = models.CharField(max_length=100)
-    image = models.ImageField(upload_to='uploads')
+    image = models.ImageField(upload_to='uploads/packages', blank=True, null=True)
     description = models.TextField()
     price = models.FloatField()
     location = models.CharField(max_length=100)
-    duration = models.IntegerField()  # Duration in days
+    duration = models.IntegerField(help_text="Duration in days")
     availability = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    objects = PackageManager()
 
     # Many-to-Many relationships
     hotels = models.ManyToManyField(
@@ -63,9 +64,10 @@ class Package(models.Model):
         blank=True
     )
 
+    objects = PackageManager()
+
     def __str__(self):
         return f"Package: {self.name}, Location: {self.location}"
-
 
 
 # Review Model

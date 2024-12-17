@@ -1,13 +1,15 @@
 from django.urls import path
 from .views import *
+
 urlpatterns = [
-    path('featured/',Featured_list.as_view()),
-    path('package/<int:pk>/',PackageDetail.as_view()),
-    path('reviews/<int:pk>/', ReviewListCreate.as_view(), name='package-reviews'),
+    path('hotels/', HotelListCreateView.as_view(), name='hotel-list-create'),
+    path('activities/', ActivityListCreateView.as_view(), name='activity-list-create'),
+    path('packages/', PackageListView.as_view(), name='package-list'),
+    path('packages/<int:pk>/', PackageDetailView.as_view(), name='package-detail'),
+    path('packages/create/', CreatePackageView.as_view(), name='create-package'),
+    path('packages/<int:package_id>/reviews/', ReviewListCreateView.as_view(), name='review-list-create'),
     path('',index),
-    path('packages/<int:package_id>/add_hotels_activities/', AddHotelsActivitiesToPackageView.as_view(), name='add_hotels_activities'),
     path('addPackage/',post_package),
     path('updatepackage/<int:Package_id>',update_package),
     path('deletepackage/<int:Package_id>',delete_package),
 ]
-

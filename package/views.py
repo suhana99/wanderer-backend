@@ -1,73 +1,48 @@
-from django.shortcuts import render,redirect
-from rest_framework import generics,permissions,mixins,status
+from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
-from .models import *
-from .serializers import PackageSerializer,ReviewSerializer
-from django.contrib import messages
-from users.auth import admin_only
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.parsers import JSONParser
-from django.http import JsonResponse
-from django.db import IntegrityError
-from django.contrib.auth.models import User
-from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from .models import Hotel, Activity, Package, Review
+from .serializers import HotelSerializer, ActivitySerializer, PackageSerializer, ReviewSerializer
 from django.contrib.auth.decorators import login_required
 from .forms import *
+from users.auth import admin_only
+from django.shortcuts import render,redirect
+from django.contrib import messages
 
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+
+# Hotel Views
+class HotelListCreateView(generics.ListCreateAPIView):
+    queryset = Hotel.objects.all()
+    serializer_class = HotelSerializer
+    permission_classes = [IsAuthenticated]
 
 
-# Create your views here.
+# Activity Views
+class ActivityListCreateView(generics.ListCreateAPIView):
+    queryset = Activity.objects.all()
+    serializer_class = ActivitySerializer
+    permission_classes = [IsAuthenticated]
 
-class AddHotelsActivitiesToPackageView(APIView):
-    permission_classes = [IsAdminUser]
 
-    def post(self, request, package_id):
-        try:
-            package = Package.objects.get(id=package_id)
-        except Package.DoesNotExist:
-            return Response({"error": "Package not found."}, status=status.HTTP_404_NOT_FOUND)
+# Package Views
+class PackageListView(generics.ListAPIView):
+    queryset = Package.objects.filter(availability=True)
+    serializer_class = PackageSerializer
 
-        hotels = request.data.get('hotels', [])
-        activities = request.data.get('activities', [])
 
-        # Add hotels
-        if hotels:
-            for hotel_id in hotels:
-                try:
-                    hotel = Hotel.objects.get(id=hotel_id)
-                    package.hotels.add(hotel)
-                except Hotel.DoesNotExist:
-                    continue
-
-        # Add activities
-        if activities:
-            for activity_id in activities:
-                try:
-                    activity = Activity.objects.get(id=activity_id)
-                    package.activities.add(activity)
-                except Activity.DoesNotExist:
-                    continue
-
-        package.save()
-        return Response({"message": "Hotels and activities added to package successfully."}, status=status.HTTP_200_OK)
-    
-class Featured_list(generics.ListAPIView):
-    queryset=Package.objects.all().order_by('-id')[:6]
-    serializer_class=PackageSerializer
-
-    def perform_create(self,serializer):
-        serializer.save()
-
-class PackageDetail(generics.RetrieveUpdateDestroyAPIView):
+class PackageDetailView(generics.RetrieveAPIView):
     queryset = Package.objects.all()
     serializer_class = PackageSerializer
 
 
-class ReviewListCreate(generics.ListCreateAPIView):
+class CreatePackageView(generics.CreateAPIView):
+    queryset = Package.objects.all()
+    serializer_class = PackageSerializer
+    permission_classes = [IsAdminUser]
+
+
+# Review Views
+class ReviewListCreateView(generics.ListCreateAPIView):
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
@@ -75,12 +50,8 @@ class ReviewListCreate(generics.ListCreateAPIView):
         return Review.objects.filter(package_id=package_id)
 
     def perform_create(self, serializer):
-        package_id = self.kwargs['package_id']
-        try:
-            package = Package.objects.get(id=package_id)
-        except Package.DoesNotExist:
-            raise ValidationError("Invalid package ID.")
-        serializer.save(user=self.request.user, package=package)
+        package = Package.objects.get(id=self.kwargs['package_id'])
+        serializer.save(package=package, user=self.request.user)
 
 @login_required
 @admin_only
@@ -136,56 +107,3 @@ def delete_package(request,Package_id):
     messages.add_message(request,messages.SUCCESS,'Packages deleted.')
     return redirect('/package')
 
-# @login_required
-# @admin_only
-# def post_category(request):
-#     if request.method=="POST":
-#         form=CategoryForm(request.POST)
-#         if form.is_valid():
-#             form.save()
-#             messages.add_message(request,messages.SUCCESS,'Category added successfully.')
-#             return redirect('/Packages/addcategory')
-#         else:
-#             messages.add_message(request,messages.ERROR,'failed to add category.')
-#             return render(request,'Packages/addcategory.html',{'form':form})
-#     context={
-#         'form':CategoryForm
-#     }
-#     return render(request,'Packages/addcategory.html',context)
-
-# @login_required
-# @admin_only
-# def show_category(request):
-#     #fetch data from the table
-#     categories=Category.objects.all()
-#     context={
-#         'categories':categories
-#     }
-#     return render(request,'Packages/category.html',context)
-
-# @login_required
-# @admin_only
-# def update_category(request,category_id):
-#     instance=Category.objects.get(id=category_id)
-
-#     if request.method=="POST":
-#         form=CategoryForm(request.POST,instance=instance)
-#         if form.is_valid():
-#             form.save()
-#             messages.add_message(request,messages.SUCCESS,'Category updated successfully.')
-#             return redirect('/Packages/categories')
-#         else:
-#             messages.add_message(request,messages.ERROR,'failed to update category.')
-#             return render(request,'Packages/updatecategory.html',{'form':form})
-#     context={
-#         'form':CategoryForm(instance=instance)
-#     }
-#     return render(request,'Packages/updatecategory.html',context)
-
-# @login_required
-# @admin_only
-# def delete_category(request,category_id):
-#     category=Category.objects.get(id=category_id)
-#     category.delete()
-#     messages.add_message(request,messages.SUCCESS,'Category deleted.')
-#     return redirect('/Packages/categories')
